@@ -1,0 +1,50 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${db_user}
+      POSTGRES_PASSWORD: ${db_password}
+      POSTGRES_DB: ${db_name}
+    ports:
+      - "${db_port}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4:8.12
+    depends_on: [db]
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+
+  api:
+    build: ./apps/api
+    depends_on: [db]
+    environment:
+      DATABASE_URL: postgres://${db_user}:${db_password}@db:5432/${db_name}
+      NODE_ENV: ${app_node_env}
+      PORT: ${api_port}
+      JWT_SECRET: ${jwt_secret}
+      CORS_ORIGIN: http://localhost:${web_port}
+    ports:
+      - "${api_port}:4000"
+    command: ["node", "dist/main"]
+    volumes:
+      - ./apps/api:/usr/src/app
+
+  web:
+    build: ./apps/web
+    depends_on: [api]
+    environment:
+      VITE_API_URL: http://localhost:${api_port}
+    ports:
+      - "${web_port}:5173"
+    volumes:
+      - ./apps/web:/usr/src/app
+
+volumes:
+  db_data:
