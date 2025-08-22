@@ -1,0 +1,40 @@
+### GET Prompts
+### Get all prompts from the Prompt Studio API
+GET {{prompt_studio}}/prompts
+Content-Type: application/json
+
+### Add Prompt
+### Add a new prompt to the Prompt Studio API
+POST {{prompt_studio}}/prompts
+Content-Type: application/json
+
+{
+  "name": "Test Prompt",
+  "content": "This is a test prompt",
+  "prompt": "What is the capital of France?",
+  "tags": [
+    "geography",
+    "test"
+  ]
+}
+
+### Update Prompt
+### Update an existing prompt in the Prompt Studio API
+@id=6f9e1492-f1bb-4930-b1e6-9066277302e1
+PATCH {{prompt_studio}}/prompts/{{id}}
+Content-Type: application/json
+
+{
+  "name": "Updated Test Prompt",
+  "content": "This is an updated test prompt",
+  "prompt": "What is the capital of Germany?",
+  "tags": [
+    "geography",
+    "update"
+  ]
+}
+
+### Delete Prompt
+### Delete a prompt from the Prompt Studio API
+DELETE {{prompt_studio}}/prompts/{{id}}
+Content-Type: application/json
