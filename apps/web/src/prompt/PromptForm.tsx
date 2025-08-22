@@ -23,6 +23,7 @@ import {
   Paper,
   Select,
   TextField,
+  Tooltip,
   Typography,
   useMediaQuery
 } from '@mui/material';
@@ -35,6 +36,17 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import PreviewIcon from '@mui/icons-material/Preview';
 import SaveIcon from '@mui/icons-material/Save';
+import FormatBoldIcon from '@mui/icons-material/FormatBold';
+import FormatItalicIcon from '@mui/icons-material/FormatItalic';
+import FormatUnderlinedIcon from '@mui/icons-material/FormatUnderlined';
+import StrikethroughSIcon from '@mui/icons-material/StrikethroughS';
+import CodeIcon from '@mui/icons-material/Code';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
+import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
+import RedoIcon from '@mui/icons-material/Redo';
+import UndoIcon from '@mui/icons-material/Undo';
+import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
 
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -45,10 +57,43 @@ import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 import TextAlign from '@tiptap/extension-text-align';
 import Highlight from '@tiptap/extension-highlight';
+import Underline from '@tiptap/extension-underline';
 import './tiptap.css';
 
 import type { Prompt, PromptVariable } from './types';
 
+// Reusable toolbar button
+interface ToolbarButtonProps {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  active?: boolean;
+}
+
+const ToolbarButton: React.FC<ToolbarButtonProps> = ({icon, label, onClick, active}) => {
+  const theme = useTheme();
+
+  return (
+    <Tooltip title={label} arrow>
+      <IconButton
+        size="small"
+        onClick={onClick}
+        color={active ? 'primary' : 'default'}
+  sx={(theme: import('@mui/material/styles').Theme) => ({
+          borderRadius: 1.5,
+          border: `1px solid ${active ? theme.palette.primary.main : (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)')}`,
+            backgroundColor: active ? (theme.palette.mode === 'dark' ? 'rgba(25,118,210,0.15)' : 'rgba(25,118,210,0.08)') : 'transparent',
+            '&:hover': {
+              backgroundColor: active ? (theme.palette.mode === 'dark' ? 'rgba(25,118,210,0.25)' : 'rgba(25,118,210,0.15)') : theme.palette.action.hover
+            },
+            transition: 'background-color 120ms ease'
+        })}
+      >
+        {icon}
+      </IconButton>
+    </Tooltip>
+  );
+};
 
 interface Props {
   prompt?: Prompt;
@@ -69,7 +114,8 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
   // Tiptap editor instance
   const editor = useEditor({
     extensions: [
-      StarterKit, // Re-enable StarterKit with default codeBlock
+      StarterKit,
+      Underline,
       Image,
       Table.configure({ resizable: true }),
       TableRow,
@@ -374,36 +420,57 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
                 </Box>
                 {/* Tiptap Toolbar */}
                 {editor && (
-                  <Box mb={1} display="flex" flexWrap="wrap" gap={1}>
-                    <Button size="small" onClick={() => editor.chain().focus().toggleBold().run()} variant={editor.isActive('bold') ? 'contained' : 'outlined'}>Bold</Button>
-                    <Button size="small" onClick={() => editor.chain().focus().toggleItalic().run()} variant={editor.isActive('italic') ? 'contained' : 'outlined'}>Italic</Button>
-                    <Button size="small" onClick={() => editor.chain().focus().toggleUnderline().run()} variant={editor.isActive('underline') ? 'contained' : 'outlined'}>Underline</Button>
-                    <Button size="small" onClick={() => editor.chain().focus().toggleStrike().run()} variant={editor.isActive('strike') ? 'contained' : 'outlined'}>Strike</Button>
-                    <Button size="small" onClick={() => editor.chain().focus().toggleCode().run()} variant={editor.isActive('code') ? 'contained' : 'outlined'}>Code</Button>
-                    <Button size="small" onClick={() => editor.chain().focus().toggleBulletList().run()} variant={editor.isActive('bulletList') ? 'contained' : 'outlined'}>Bullet List</Button>
-                    <Button size="small" onClick={() => editor.chain().focus().toggleOrderedList().run()} variant={editor.isActive('orderedList') ? 'contained' : 'outlined'}>Numbered List</Button>
-                    <Button size="small" onClick={() => editor.chain().focus().toggleBlockquote().run()} variant={editor.isActive('blockquote') ? 'contained' : 'outlined'}>Blockquote</Button>
-                    <Button size="small" onClick={() => editor.chain().focus().setHorizontalRule().run()} variant="outlined">HR</Button>
-                    <Button size="small" onClick={() => editor.chain().focus().undo().run()} variant="outlined">Undo</Button>
-                    <Button size="small" onClick={() => editor.chain().focus().redo().run()} variant="outlined">Redo</Button>
-                  </Box>
+                  <Paper
+                    variant="outlined"
+                    elevation={0}
+                    sx={{
+                      mb: 1,
+                      p: 0.5,
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 0.5,
+                      borderRadius: 2,
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)'
+                    }}
+                  >
+                    <ToolbarButton icon={<FormatBoldIcon fontSize="small"/>} active={editor.isActive('bold')} label="Bold" onClick={() => editor.chain().focus().toggleBold().run()} />
+                    <ToolbarButton icon={<FormatItalicIcon fontSize="small"/>} active={editor.isActive('italic')} label="Italic" onClick={() => editor.chain().focus().toggleItalic().run()} />
+                    <ToolbarButton icon={<FormatUnderlinedIcon fontSize="small"/>} active={editor.isActive('underline')} label="Underline" onClick={() => editor.chain().focus().toggleUnderline().run()} />
+                    <ToolbarButton icon={<StrikethroughSIcon fontSize="small"/>} active={editor.isActive('strike')} label="Strikethrough" onClick={() => editor.chain().focus().toggleStrike().run()} />
+                    <ToolbarButton icon={<CodeIcon fontSize="small"/>} active={editor.isActive('code')} label="Inline Code" onClick={() => editor.chain().focus().toggleCode().run()} />
+                    <Divider flexItem orientation="vertical" sx={{mx: 0.5}} />
+                    <ToolbarButton icon={<FormatListBulletedIcon fontSize="small"/>} active={editor.isActive('bulletList')} label="Bullet List" onClick={() => editor.chain().focus().toggleBulletList().run()} />
+                    <ToolbarButton icon={<FormatListNumberedIcon fontSize="small"/>} active={editor.isActive('orderedList')} label="Numbered List" onClick={() => editor.chain().focus().toggleOrderedList().run()} />
+                    <ToolbarButton icon={<FormatQuoteIcon fontSize="small"/>} active={editor.isActive('blockquote')} label="Blockquote" onClick={() => editor.chain().focus().toggleBlockquote().run()} />
+                    <ToolbarButton icon={<HorizontalRuleIcon fontSize="small"/>} label="Horizontal Rule" onClick={() => editor.chain().focus().setHorizontalRule().run()} />
+                    <Divider flexItem orientation="vertical" sx={{mx: 0.5}} />
+                    <ToolbarButton icon={<UndoIcon fontSize="small"/>} label="Undo" onClick={() => editor.chain().focus().undo().run()} />
+                    <ToolbarButton icon={<RedoIcon fontSize="small"/>} label="Redo" onClick={() => editor.chain().focus().redo().run()} />
+                  </Paper>
                 )}
-                <Box
-                  border={1}
-                  borderColor={touched.content && errors.content ? 'error.main' : (theme.palette.mode === 'dark' ? 'grey.700' : 'grey.300')}
-                  borderRadius={2}
-                  p={2}
+                <Paper
+                  variant="outlined"
                   sx={{
-                    minHeight: 180,
-                    backgroundColor: theme.palette.mode === 'dark' ? 'background.paper' : '#fafbfc',
-                    color: 'text.primary',
+                    borderRadius: 2,
+                    p: 2,
+                    minHeight: 200,
+                    position: 'relative',
+                    backgroundColor: theme.palette.mode === 'dark' ? 'background.paper' : '#ffffff',
+                    '&:hover': { boxShadow: theme.palette.mode === 'dark' ? '0 0 0 1px rgba(255,255,255,0.1)' : '0 0 0 1px rgba(0,0,0,0.05)' },
+                    transition: 'box-shadow 120ms ease',
                     '& .tiptap-editor': {
-                      color: 'inherit'
+                      color: 'text.primary',
+                      fontFamily: theme.typography.fontFamily,
+                      lineHeight: 1.55
+                    },
+                    '&.error': {
+                      borderColor: 'error.main'
                     }
                   }}
+                  className={touched.content && errors.content ? 'error' : undefined}
                 >
                   <EditorContent editor={editor} />
-                </Box>
+                </Paper>
                 {touched.content && errors.content && (
                   <Typography color="error" variant="body2" mt={1}>{errors.content}</Typography>
                 )}
