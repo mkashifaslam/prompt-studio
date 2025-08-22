@@ -4,7 +4,6 @@ import {
   AppBar,
   Box,
   Container,
-  createTheme,
   CssBaseline,
   Divider,
   Drawer,
@@ -17,7 +16,6 @@ import {
   Menu,
   MenuItem,
   Paper,
-  ThemeProvider,
   Toolbar,
   Typography,
   useMediaQuery,
@@ -25,6 +23,8 @@ import {
 } from '@mui/material';
 import {
   AccountCircle,
+  Brightness4 as DarkModeIcon,
+  Brightness7 as LightModeIcon,
   ChevronLeft as ChevronLeftIcon,
   Dashboard as DashboardIcon,
   Description as PromptIcon,
@@ -33,36 +33,10 @@ import {
 } from '@mui/icons-material';
 import PromptCrud from './prompt';
 import Dashboard from './dashboard/Dashboard';
+import Settings from './settings/Settings';
+import {ThemeProvider, useTheme as useCustomTheme} from './theme/ThemeProvider';
 
 const drawerWidth = 240;
-
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-    background: {
-      default: '#f5f5f5',
-    },
-  },
-  typography: {
-    h6: {
-      fontWeight: 600,
-    },
-  },
-  components: {
-    MuiAppBar: {
-      styleOverrides: {
-        root: {
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        },
-      },
-    },
-  },
-});
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -72,6 +46,7 @@ function Layout({children}: LayoutProps) {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const theme = useTheme();
+  const {mode, toggleTheme} = useCustomTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const location = useLocation();
 
@@ -162,6 +137,15 @@ function Layout({children}: LayoutProps) {
           <Typography variant="h6" noWrap component="div" sx={{flexGrow: 1}}>
             {menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard'}
           </Typography>
+
+          <IconButton
+            color="inherit"
+            onClick={toggleTheme}
+            sx={{mr: 1}}
+            aria-label="Toggle theme"
+          >
+            {mode === 'dark' ? <LightModeIcon/> : <DarkModeIcon/>}
+          </IconButton>
 
           <IconButton
             size="large"
@@ -298,18 +282,13 @@ function Layout({children}: LayoutProps) {
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider>
       <Router>
         <Layout>
           <Routes>
             <Route path="/" element={<Dashboard/>}/>
             <Route path="/prompts" element={<PromptCrud/>}/>
-            <Route path="/settings" element={
-              <Box>
-                <Typography variant="h4" gutterBottom>Settings</Typography>
-                <Typography variant="body1">Settings page coming soon...</Typography>
-              </Box>
-            }/>
+            <Route path="/settings" element={<Settings/>}/>
           </Routes>
         </Layout>
       </Router>
