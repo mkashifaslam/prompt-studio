@@ -32,6 +32,7 @@ import {
   Settings as SettingsIcon
 } from '@mui/icons-material';
 import PromptCrud from './prompt';
+import Dashboard from './dashboard/Dashboard';
 
 const drawerWidth = 240;
 
@@ -88,7 +89,7 @@ function Layout({children}: LayoutProps) {
 
   const menuItems = [
     {text: 'Dashboard', icon: <DashboardIcon/>, path: '/'},
-    {text: 'Prompts', icon: <PromptIcon/>, path: '/'},
+    {text: 'Prompts', icon: <PromptIcon/>, path: '/prompts'},
     {text: 'Settings', icon: <SettingsIcon/>, path: '/settings'},
   ];
 
@@ -301,7 +302,8 @@ function App() {
       <Router>
         <Layout>
           <Routes>
-            <Route path="/" element={<PromptCrud/>}/>
+            <Route path="/" element={<Dashboard/>}/>
+            <Route path="/prompts" element={<PromptCrud/>}/>
             <Route path="/settings" element={
               <Box>
                 <Typography variant="h4" gutterBottom>Settings</Typography>
