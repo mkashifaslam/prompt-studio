@@ -1,0 +1,28 @@
+{
+  "name": "prompt-studio",
+  "version": "1.0.0",
+  "description": "Prompt Studio - A full-stack prompt management application",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm run --parallel dev:api dev:web",
+    "dev:api": "pnpm --filter api run start:dev",
+    "dev:web": "pnpm --filter web run dev",
+    "build": "pnpm run --parallel build:api build:web",
+    "build:api": "pnpm --filter api run build",
+    "build:web": "pnpm --filter web run build",
+    "start": "pnpm run --parallel start:api start:web",
+    "start:api": "pnpm --filter api run start",
+    "start:web": "pnpm --filter web run preview",
+    "test": "pnpm --filter api run test",
+    "lint": "pnpm --filter api run lint",
+    "install:all": "pnpm install"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

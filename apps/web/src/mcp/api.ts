@@ -19,9 +19,15 @@ export const mcpApi = {
     const response = await fetch(`${MCP_API_BASE_URL}/${name}`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(config),
+      body: JSON.stringify({
+        ...config,
+        name,
+      }),
     });
-    if (!response.ok) throw new Error('Failed to create MCP config');
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to create MCP config: ${response.status} ${errorText}`);
+    }
     return response.json();
   },
 
@@ -29,9 +35,15 @@ export const mcpApi = {
     const response = await fetch(`${MCP_API_BASE_URL}/${name}`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(config),
+      body: JSON.stringify({
+        ...config,
+        name,
+      }),
     });
-    if (!response.ok) throw new Error('Failed to update MCP config');
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to update MCP config: ${response.status} ${errorText}`);
+    }
     return response.json();
   },
 

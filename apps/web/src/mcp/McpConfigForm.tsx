@@ -19,9 +19,9 @@ import {
   Switch,
   TextField,
   Typography,
-  useMediaQuery,
-  useTheme
+  useMediaQuery
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import {
   Add as AddIcon,
   ArrowBack as ArrowBackIcon,
@@ -55,7 +55,7 @@ export default function McpConfigForm({config, onSave, onCancel}: Props) {
   const [env, setEnv] = useState<Record<string, string>>(config?.config.env || {});
   const [cwd, setCwd] = useState(config?.config.cwd || '');
   const [timeout, setTimeout] = useState(config?.config.timeout || 30);
-  const [serverUrl, setServerUrl] = useState(config?.config.serverUrl || '');
+  const [serverUrl, setServerUrl] = useState(config?.config.baseUrl || '');
   const [apiKey, setApiKey] = useState(config?.config.apiKey || '');
   const [capabilities, setCapabilities] = useState<string[]>(config?.config.capabilities || []);
   const [showApiKey, setShowApiKey] = useState(false);
@@ -63,6 +63,7 @@ export default function McpConfigForm({config, onSave, onCancel}: Props) {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -94,14 +95,25 @@ export default function McpConfigForm({config, onSave, onCancel}: Props) {
       return;
     }
 
+    // Derive transport based on inputs
+    const trimmedUrl = serverUrl.trim();
+    const hasCommand = !!command.trim();
+    let transport: 'stdio' | 'sse' | 'websocket' = 'stdio';
+    if (!hasCommand && trimmedUrl) {
+      transport = trimmedUrl.startsWith('ws') ? 'websocket' : 'sse';
+    }
+
     setLoading(true);
     try {
       await onSave({
         ...config,
         name: name.trim(),
         config: {
-          description: description.trim(),
+          // Align with backend McpServerSchema
+          name: name.trim(),
+          description: description.trim() || undefined,
           disabled,
+          transport,
           command: command.trim() || undefined,
           args: args.filter(arg => arg.trim()),
           env: Object.fromEntries(
@@ -109,13 +121,16 @@ export default function McpConfigForm({config, onSave, onCancel}: Props) {
           ),
           cwd: cwd.trim() || undefined,
           timeout,
-          serverUrl: serverUrl.trim() || undefined,
+          baseUrl: trimmedUrl || undefined,
           apiKey: apiKey.trim() || undefined,
           capabilities: capabilities.filter(cap => cap.trim()),
-        }
+          tools: (capabilities || []).filter(cap => cap.trim()).map(cap => ({name: cap.trim()})),
+        },
       });
-    } catch (error) {
+      setSubmitError(null);
+    } catch (error: any) {
       console.error('Error saving MCP config:', error);
+      setSubmitError(error?.message || 'Failed to save MCP config');
     } finally {
       setLoading(false);
     }
@@ -214,6 +229,9 @@ export default function McpConfigForm({config, onSave, onCancel}: Props) {
           <Alert severity="info" sx={{mb: 3}}>
             You are editing an existing MCP server configuration.
           </Alert>
+        )}
+        {submitError && (
+          <Alert severity="error" sx={{mb: 3}}>{submitError}</Alert>
         )}
 
         <Box component="form" onSubmit={handleSubmit}>
