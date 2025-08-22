@@ -22,6 +22,7 @@ import {
   CheckCircle as ActiveIcon,
   Description as PromptIcon,
   Person as UserIcon,
+  Storage as McpIcon,
   Update as RecentIcon
 } from '@mui/icons-material';
 import {API_BASE_URL} from '../prompt/api';
@@ -33,6 +34,9 @@ interface DashboardStats {
   recentPrompts: number;
   totalUsers: number;
   avgPromptsPerUser: number;
+  totalMcpServers: number;
+  activeMcpServers: number;
+  inactiveMcpServers: number;
 }
 
 interface RecentPrompt {
@@ -155,13 +159,29 @@ export default function Dashboard() {
         const totalUsers = 12; // Mock data
         const avgPromptsPerUser = totalPrompts > 0 ? Math.round(totalPrompts / totalUsers * 10) / 10 : 0;
 
+        // Fetch MCP configs data
+        const mcpResponse = await fetch(`${API_BASE_URL}/mcp`);
+        let totalMcpServers = 0;
+        let activeMcpServers = 0;
+        let inactiveMcpServers = 0;
+
+        if (mcpResponse.ok) {
+          const mcpConfigs = await mcpResponse.json();
+          totalMcpServers = mcpConfigs.length;
+          activeMcpServers = mcpConfigs.filter((mcp: any) => !mcp.config.disabled).length;
+          inactiveMcpServers = totalMcpServers - activeMcpServers;
+        }
+
         setStats({
           totalPrompts,
           activePrompts,
           inactivePrompts,
           recentPrompts,
           totalUsers,
-          avgPromptsPerUser
+          avgPromptsPerUser,
+          totalMcpServers,
+          activeMcpServers,
+          inactiveMcpServers
         });
 
         // Set recent prompts for the activity feed
@@ -259,6 +279,17 @@ export default function Dashboard() {
             icon={<UserIcon/>}
             color="secondary"
             subtitle="Active users"
+          />
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard
+            title="MCP Servers"
+            value={stats.totalMcpServers}
+            icon={<McpIcon/>}
+            color="info"
+            subtitle="Configured servers"
+            trend={{value: 8, isPositive: true}}
           />
         </Grid>
       </Grid>

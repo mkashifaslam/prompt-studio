@@ -29,11 +29,13 @@ import {
   Dashboard as DashboardIcon,
   Description as PromptIcon,
   Menu as MenuIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Storage as McpIcon
 } from '@mui/icons-material';
 import PromptCrud from './prompt';
 import Dashboard from './dashboard/Dashboard';
 import Settings from './settings/Settings';
+import McpManagement from './mcp';
 import {ThemeProvider, useTheme as useCustomTheme} from './theme/ThemeProvider';
 
 const drawerWidth = 240;
@@ -65,6 +67,7 @@ function Layout({children}: LayoutProps) {
   const menuItems = [
     {text: 'Dashboard', icon: <DashboardIcon/>, path: '/'},
     {text: 'Prompts', icon: <PromptIcon/>, path: '/prompts'},
+    {text: 'MCP Servers', icon: <McpIcon/>, path: '/mcp'},
     {text: 'Settings', icon: <SettingsIcon/>, path: '/settings'},
   ];
 
@@ -288,6 +291,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard/>}/>
             <Route path="/prompts" element={<PromptCrud/>}/>
+            <Route path="/mcp" element={<McpManagement/>}/>
             <Route path="/settings" element={<Settings/>}/>
           </Routes>
         </Layout>
