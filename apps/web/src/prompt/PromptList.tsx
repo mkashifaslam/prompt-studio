@@ -24,18 +24,19 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material';
-import {Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon} from '@mui/icons-material';
+import {Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon, Visibility as ViewIcon} from '@mui/icons-material';
 import {Prompt} from './types';
 import {API_BASE_URL} from './api';
 
 interface Props {
   onEdit: (prompt: Prompt) => void;
+  onView: (prompt: Prompt) => void;
   onCreate: () => void;
   onDelete: (prompt: Prompt) => void;
   refreshKey: number;
 }
 
-export default function PromptList({onEdit, onCreate, onDelete, refreshKey}: Props) {
+export default function PromptList({onEdit, onView, onCreate, onDelete, refreshKey}: Props) {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -132,8 +133,44 @@ export default function PromptList({onEdit, onCreate, onDelete, refreshKey}: Pro
                     <Typography variant="body2" color="text.secondary">
                       Created: {new Date(prompt.createdAt).toLocaleDateString()}
                     </Typography>
+                    <Box display="flex" gap={0.5} flexWrap="wrap" mt={1}>
+                      {prompt.variables && prompt.variables.length > 0 ? (
+                        prompt.variables.slice(0, 3).map((variable) => (
+                          <Chip
+                            key={variable.key}
+                            label={`{{${variable.key}}}`}
+                            size="small"
+                            variant="outlined"
+                            color="primary"
+                            sx={{fontSize: '0.65rem'}}
+                          />
+                        ))
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          No variables
+                        </Typography>
+                      )}
+                      {prompt.variables && prompt.variables.length > 3 && (
+                        <Chip
+                          label={`+${prompt.variables.length - 3} more`}
+                          size="small"
+                          variant="outlined"
+                          color="default"
+                          sx={{fontSize: '0.65rem'}}
+                        />
+                      )}
+                    </Box>
                   </CardContent>
                   <CardActions sx={{justifyContent: 'flex-end', px: 2, pb: 2}}>
+                    <Tooltip title="View prompt">
+                      <IconButton
+                        size="small"
+                        onClick={() => onView(prompt)}
+                        aria-label={`View ${prompt.name}`}
+                      >
+                        <ViewIcon/>
+                      </IconButton>
+                    </Tooltip>
                     <Tooltip title="Edit prompt">
                       <IconButton
                         size="small"
@@ -212,6 +249,7 @@ export default function PromptList({onEdit, onCreate, onDelete, refreshKey}: Pro
               <TableRow sx={{backgroundColor: 'grey.50'}}>
                 <TableCell sx={{fontWeight: 'bold'}}>Name</TableCell>
                 <TableCell sx={{fontWeight: 'bold'}}>Version</TableCell>
+                <TableCell sx={{fontWeight: 'bold'}}>Variables</TableCell>
                 <TableCell sx={{fontWeight: 'bold'}}>Status</TableCell>
                 <TableCell sx={{fontWeight: 'bold'}}>Created</TableCell>
                 <TableCell sx={{fontWeight: 'bold'}} align="right">Actions</TableCell>
@@ -235,6 +273,26 @@ export default function PromptList({onEdit, onCreate, onDelete, refreshKey}: Pro
                     </Typography>
                   </TableCell>
                   <TableCell>
+                    <Box display="flex" gap={0.5} flexWrap="wrap">
+                      {prompt.variables && prompt.variables.length > 0 ? (
+                        prompt.variables.map((variable, index) => (
+                          <Chip
+                            key={variable.key}
+                            label={`{{${variable.key}}}`}
+                            size="small"
+                            variant="outlined"
+                            color="primary"
+                            sx={{fontSize: '0.7rem'}}
+                          />
+                        ))
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          No variables
+                        </Typography>
+                      )}
+                    </Box>
+                  </TableCell>
+                  <TableCell>
                     <Chip
                       label={prompt.active ? 'Active' : 'Inactive'}
                       color={prompt.active ? 'success' : 'default'}
@@ -248,6 +306,15 @@ export default function PromptList({onEdit, onCreate, onDelete, refreshKey}: Pro
                   </TableCell>
                   <TableCell align="right">
                     <Box display="flex" gap={1} justifyContent="flex-end">
+                      <Tooltip title="View prompt">
+                        <IconButton
+                          size="small"
+                          onClick={() => onView(prompt)}
+                          aria-label={`View ${prompt.name}`}
+                        >
+                          <ViewIcon/>
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Edit prompt">
                         <IconButton
                           size="small"

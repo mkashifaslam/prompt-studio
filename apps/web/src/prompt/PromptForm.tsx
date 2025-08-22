@@ -1,6 +1,9 @@
 import * as React from 'react';
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Alert,
   Box,
   Breadcrumbs,
@@ -13,15 +16,28 @@ import {
   FormGroup,
   FormLabel,
   Grid,
+  IconButton,
+  InputLabel,
   Link,
+  MenuItem,
   Paper,
+  Select,
   TextField,
   Typography,
   useMediaQuery,
   useTheme
 } from '@mui/material';
-import {ArrowBack as ArrowBackIcon, Cancel as CancelIcon, Save as SaveIcon} from '@mui/icons-material';
-import {Prompt} from './types';
+import {
+  Add as AddIcon,
+  ArrowBack as ArrowBackIcon,
+  AutoFixHigh as AutoDetectIcon,
+  Cancel as CancelIcon,
+  Delete as DeleteIcon,
+  ExpandMore as ExpandMoreIcon,
+  Preview as PreviewIcon,
+  Save as SaveIcon
+} from '@mui/icons-material';
+import {Prompt, PromptVariable} from './types';
 
 interface Props {
   prompt?: Prompt;
@@ -32,19 +48,65 @@ interface Props {
 interface FormErrors {
   name?: string;
   content?: string;
+  variables?: { [key: string]: string };
 }
 
 export default function PromptForm({prompt, onSave, onCancel}: Props) {
   const [name, setName] = useState(prompt?.name || '');
   const [content, setContent] = useState(prompt?.content || '');
   const [active, setActive] = useState(prompt?.active ?? true);
-  const [version, setVersion] = useState(prompt?.version || '1.0');
+  const [version, setVersion] = useState(prompt?.version || 1);
+  const [variables, setVariables] = useState<PromptVariable[]>(prompt?.variables || []);
+  const [previewValues, setPreviewValues] = useState<{ [key: string]: string }>({});
+  const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // Auto-detect variables from content when content changes
+  useEffect(() => {
+    autoDetectVariables();
+  }, [content]);
+
+  // Initialize preview values when variables change
+  useEffect(() => {
+    const newPreviewValues: { [key: string]: string } = {};
+    variables.forEach(variable => {
+      newPreviewValues[variable.key] = variable.defaultValue || `[${variable.key}]`;
+    });
+    setPreviewValues(newPreviewValues);
+  }, [variables]);
+
+  const autoDetectVariables = () => {
+    // Extract variables from content using {{variable}} pattern
+    const variableMatches = content.match(/\{\{([^}]+)\}\}/g);
+    if (!variableMatches) return;
+
+    const detectedKeys = variableMatches.map(match =>
+      match.replace(/[{}]/g, '').trim()
+    );
+
+    // Get unique variable keys
+    const uniqueKeys = [...new Set(detectedKeys)];
+
+    // Update variables list, preserving existing variable configurations
+    const newVariables: PromptVariable[] = uniqueKeys.map(key => {
+      const existing = variables.find(v => v.key === key);
+      return existing || {
+        key,
+        description: '',
+        required: true,
+        type: 'string',
+        defaultValue: ''
+      };
+    });
+
+    setVariables(newVariables);
+  };
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -63,8 +125,26 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
       newErrors.content = 'Prompt content must be at least 10 characters';
     }
 
+    // Validate variables only if they exist
+    const variableErrors: { [key: string]: string } = {};
+    variables.forEach(variable => {
+      if (!variable.key.trim()) {
+        variableErrors[variable.key || 'unnamed'] = 'Variable key is required';
+      } else if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(variable.key)) {
+        variableErrors[variable.key] = 'Variable key must be valid (letters, numbers, underscore)';
+      }
+
+      if (variable.type === 'select' && (!variable.options || variable.options.length === 0)) {
+        variableErrors[variable.key] = 'Select type variables must have options';
+      }
+    });
+
+    if (Object.keys(variableErrors).length > 0) {
+      newErrors.variables = variableErrors;
+    }
+
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return !newErrors.name && !newErrors.content && (!newErrors.variables || Object.keys(newErrors.variables).length === 0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,16 +157,19 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
     }
 
     setLoading(true);
+    setSubmitError(null); // Reset submit error
     try {
       await onSave({
         ...prompt,
         name: name.trim(),
         content: content.trim(),
         active,
-        version: prompt ? version : '1.0'
+        variables,
+        version: prompt ? version : 1 // Send as number, not string
       });
     } catch (error) {
       console.error('Error saving prompt:', error);
+      setSubmitError('Failed to save prompt. Please try again.'); // Set submit error
     } finally {
       setLoading(false);
     }
@@ -98,7 +181,7 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
     } else if (field === 'content') {
       setContent(value);
     } else if (field === 'version') {
-      setVersion(value);
+      setVersion(parseInt(value) || 1);
     }
 
     // Clear error when user starts typing
@@ -112,7 +195,55 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
     validateForm();
   };
 
-  const isFormValid = name.trim() && content.trim() && Object.keys(errors).length === 0;
+  const addVariable = () => {
+    const newVariable: PromptVariable = {
+      key: `variable_${variables.length + 1}`,
+      description: '',
+      required: true,
+      type: 'string',
+      defaultValue: ''
+    };
+    setVariables([...variables, newVariable]);
+  };
+
+  const updateVariable = (index: number, field: keyof PromptVariable, value: any) => {
+    const newVariables = [...variables];
+    (newVariables[index] as any)[field] = value;
+
+    // Clear options if type is not select
+    if (field === 'type' && value !== 'select') {
+      newVariables[index].options = undefined;
+    }
+
+    setVariables(newVariables);
+  };
+
+  const removeVariable = (index: number) => {
+    setVariables(variables.filter((_, i) => i !== index));
+  };
+
+  const updateVariableOptions = (index: number, options: string[]) => {
+    const newVariables = [...variables];
+    newVariables[index].options = options;
+    setVariables(newVariables);
+  };
+
+  const generatePreview = () => {
+    let preview = content;
+    variables.forEach(variable => {
+      const value = previewValues[variable.key] || variable.defaultValue || `[${variable.key}]`;
+      preview = preview.replace(new RegExp(`\\{\\{${variable.key}\\}\\}`, 'g'), value);
+    });
+    return preview;
+  };
+
+  const isFormValid = () => {
+    const hasRequiredFields = name.trim() && content.trim();
+    const hasNoMainErrors = !errors.name && !errors.content;
+    const hasNoVariableErrors = !errors.variables || Object.keys(errors.variables).length === 0;
+
+    return hasRequiredFields && hasNoMainErrors && hasNoVariableErrors;
+  };
 
   return (
     <Box>
@@ -157,9 +288,15 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
           </Alert>
         )}
 
+        {submitError && (
+          <Alert severity="error" sx={{mb: 3}}>
+            {submitError}
+          </Alert>
+        )}
+
         <Box component="form" onSubmit={handleSubmit}>
           <Box sx={{mb: 4}}>
-            {/* Basic Information Section */}
+            {/* Basic Information */}
             <Typography variant="h6" gutterBottom>
               Basic Information
             </Typography>
@@ -206,9 +343,9 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
                   helperText={
                     touched.content && errors.content
                       ? errors.content
-                      : `${content.length} characters. Write your prompt content here.`
+                      : `${content.length} characters. Use {{variable_name}} for replaceable variables.`
                   }
-                  placeholder="Enter your prompt content here. You can use variables like {{variable_name}} in your prompt."
+                  placeholder="Enter your prompt content here. Use {{variable_name}} for variables that can be replaced."
                   sx={{
                     '& .MuiInputBase-root': {
                       fontFamily: 'monospace',
@@ -220,8 +357,199 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
             </Grid>
           </Box>
 
+          {/* Variables Management */}
           <Box sx={{mb: 4}}>
-            {/* Settings Section */}
+            <Typography variant="h6" gutterBottom>
+              Variables
+            </Typography>
+            <Divider sx={{mb: 3}}/>
+
+            <Box display="flex" gap={2} mb={3}>
+              <Button
+                startIcon={<AutoDetectIcon/>}
+                onClick={autoDetectVariables}
+                variant="outlined"
+                size="small"
+              >
+                Auto-Detect Variables
+              </Button>
+              <Button
+                startIcon={<AddIcon/>}
+                onClick={addVariable}
+                variant="outlined"
+                size="small"
+              >
+                Add Variable
+              </Button>
+              <Button
+                startIcon={<PreviewIcon/>}
+                onClick={() => setShowPreview(!showPreview)}
+                variant="outlined"
+                size="small"
+                color={showPreview ? "primary" : "inherit"}
+              >
+                {showPreview ? 'Hide Preview' : 'Show Preview'}
+              </Button>
+            </Box>
+
+            {variables.length === 0 ? (
+              <Alert severity="info">
+                No variables detected. Use {'{{'} and {'}}'} to define variables in your prompt content,
+                or click "Add Variable" to manually add variables.
+              </Alert>
+            ) : (
+              <Grid container spacing={2}>
+                {variables.map((variable, index) => (
+                  <Grid item xs={12} key={index}>
+                    <Paper variant="outlined" sx={{p: 2}}>
+                      <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                        <Typography variant="subtitle2" fontWeight="bold">
+                          Variable {index + 1}
+                        </Typography>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => removeVariable(index)}
+                        >
+                          <DeleteIcon/>
+                        </IconButton>
+                      </Box>
+
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} md={3}>
+                          <TextField
+                            label="Variable Key"
+                            value={variable.key}
+                            onChange={e => updateVariable(index, 'key', e.target.value)}
+                            fullWidth
+                            size="small"
+                            error={!!errors.variables?.[variable.key]}
+                            helperText={errors.variables?.[variable.key]}
+                            placeholder="variable_name"
+                          />
+                        </Grid>
+
+                        <Grid item xs={12} md={2}>
+                          <FormControl fullWidth size="small">
+                            <InputLabel>Type</InputLabel>
+                            <Select
+                              value={variable.type || 'string'}
+                              onChange={e => updateVariable(index, 'type', e.target.value)}
+                              label="Type"
+                            >
+                              <MenuItem value="string">String</MenuItem>
+                              <MenuItem value="number">Number</MenuItem>
+                              <MenuItem value="boolean">Boolean</MenuItem>
+                              <MenuItem value="select">Select</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+
+                        <Grid item xs={12} md={3}>
+                          <TextField
+                            label="Default Value"
+                            value={variable.defaultValue || ''}
+                            onChange={e => updateVariable(index, 'defaultValue', e.target.value)}
+                            fullWidth
+                            size="small"
+                            placeholder="Optional default"
+                          />
+                        </Grid>
+
+                        <Grid item xs={12} md={3}>
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={variable.required ?? true}
+                                onChange={e => updateVariable(index, 'required', e.target.checked)}
+                                size="small"
+                              />
+                            }
+                            label="Required"
+                            sx={{mt: 1}}
+                          />
+                        </Grid>
+
+                        <Grid item xs={12}>
+                          <TextField
+                            label="Description"
+                            value={variable.description || ''}
+                            onChange={e => updateVariable(index, 'description', e.target.value)}
+                            fullWidth
+                            size="small"
+                            placeholder="Describe what this variable represents"
+                          />
+                        </Grid>
+
+                        {variable.type === 'select' && (
+                          <Grid item xs={12}>
+                            <TextField
+                              label="Options (comma-separated)"
+                              value={variable.options?.join(', ') || ''}
+                              onChange={e => updateVariableOptions(index,
+                                e.target.value.split(',').map(s => s.trim()).filter(s => s)
+                              )}
+                              fullWidth
+                              size="small"
+                              placeholder="option1, option2, option3"
+                              helperText="Enter comma-separated options for the select dropdown"
+                            />
+                          </Grid>
+                        )}
+                      </Grid>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+          </Box>
+
+          {/* Preview Section */}
+          {showPreview && variables.length > 0 && (
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
+                <Typography variant="h6">Preview with Test Values</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Grid container spacing={2} sx={{mb: 3}}>
+                  {variables.map((variable, index) => (
+                    <Grid item xs={12} md={6} key={variable.key}>
+                      <TextField
+                        label={`Test value for ${variable.key}`}
+                        value={previewValues[variable.key] || ''}
+                        onChange={e => setPreviewValues(prev => ({
+                          ...prev,
+                          [variable.key]: e.target.value
+                        }))}
+                        fullWidth
+                        size="small"
+                        placeholder={variable.defaultValue || `Enter test value for ${variable.key}`}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+
+                <Typography variant="subtitle2" gutterBottom>
+                  Preview Result:
+                </Typography>
+                <Paper variant="outlined" sx={{p: 2, bgcolor: 'grey.50'}}>
+                  <Typography
+                    variant="body1"
+                    sx={{
+                      fontFamily: 'monospace',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word'
+                    }}
+                  >
+                    {generatePreview()}
+                  </Typography>
+                </Paper>
+              </AccordionDetails>
+            </Accordion>
+          )}
+
+          {/* Settings */}
+          <Box sx={{mb: 4}}>
             <Typography variant="h6" gutterBottom>
               Settings
             </Typography>
@@ -284,7 +612,7 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
               type="submit"
               variant="contained"
               size="large"
-              disabled={!isFormValid || loading}
+              disabled={!isFormValid() || loading}
               startIcon={loading ? <CircularProgress size={20} color="inherit"/> : <SaveIcon/>}
               sx={{minWidth: {sm: 160}}}
             >
