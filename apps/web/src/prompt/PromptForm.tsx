@@ -388,7 +388,20 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
                     <Button size="small" onClick={() => editor.chain().focus().redo().run()} variant="outlined">Redo</Button>
                   </Box>
                 )}
-                <Box border={1} borderColor={touched.content && errors.content ? 'error.main' : 'grey.300'} borderRadius={2} p={2} sx={{ minHeight: 180, background: '#fafbfc' }}>
+                <Box
+                  border={1}
+                  borderColor={touched.content && errors.content ? 'error.main' : (theme.palette.mode === 'dark' ? 'grey.700' : 'grey.300')}
+                  borderRadius={2}
+                  p={2}
+                  sx={{
+                    minHeight: 180,
+                    backgroundColor: theme.palette.mode === 'dark' ? 'background.paper' : '#fafbfc',
+                    color: 'text.primary',
+                    '& .tiptap-editor': {
+                      color: 'inherit'
+                    }
+                  }}
+                >
                   <EditorContent editor={editor} />
                 </Box>
                 {touched.content && errors.content && (

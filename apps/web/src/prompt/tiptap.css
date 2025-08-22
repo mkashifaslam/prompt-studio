@@ -3,6 +3,8 @@
   min-height: 180px;
   font-family: monospace;
   font-size: 0.95rem;
+  /* Inherit color from parent container (set via MUI theme) */
+  color: inherit;
 }
 .tiptap-editor p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
@@ -10,4 +12,11 @@
   float: left;
   height: 0;
   pointer-events: none;
+}
+
+/* Dark mode adjustments (relies on body background applied by MUI theme) */
+@media (prefers-color-scheme: dark) {
+  .tiptap-editor p.is-editor-empty:first-child::before {
+    color: #555;
+  }
 }
