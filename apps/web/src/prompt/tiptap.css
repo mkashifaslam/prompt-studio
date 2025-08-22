@@ -1,0 +1,13 @@
+.tiptap-editor {
+  outline: none;
+  min-height: 180px;
+  font-family: monospace;
+  font-size: 0.95rem;
+}
+.tiptap-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: #aaa;
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

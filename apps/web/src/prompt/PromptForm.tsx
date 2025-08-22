@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {useEffect, useState} from 'react';
+import { useEffect, useState } from 'react';
 import {
   Accordion,
   AccordionDetails,
@@ -24,20 +24,31 @@ import {
   Select,
   TextField,
   Typography,
-  useMediaQuery,
-  useTheme
+  useMediaQuery
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  ArrowBack as ArrowBackIcon,
-  AutoFixHigh as AutoDetectIcon,
-  Cancel as CancelIcon,
-  Delete as DeleteIcon,
-  ExpandMore as ExpandMoreIcon,
-  Preview as PreviewIcon,
-  Save as SaveIcon
-} from '@mui/icons-material';
-import {Prompt, PromptVariable} from './types';
+import { useTheme } from '@mui/material/styles';
+import AddIcon from '@mui/icons-material/Add';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import AutoDetectIcon from '@mui/icons-material/AutoFixHigh';
+import CancelIcon from '@mui/icons-material/Cancel';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import PreviewIcon from '@mui/icons-material/Preview';
+import SaveIcon from '@mui/icons-material/Save';
+
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Image from '@tiptap/extension-image';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
+import TextAlign from '@tiptap/extension-text-align';
+import Highlight from '@tiptap/extension-highlight';
+import './tiptap.css';
+
+import type { Prompt, PromptVariable } from './types';
+
 
 interface Props {
   prompt?: Prompt;
@@ -54,6 +65,30 @@ interface FormErrors {
 export default function PromptForm({prompt, onSave, onCancel}: Props) {
   const [name, setName] = useState(prompt?.name || '');
   const [content, setContent] = useState(prompt?.content || '');
+
+  // Tiptap editor instance
+  const editor = useEditor({
+    extensions: [
+      StarterKit, // Re-enable StarterKit with default codeBlock
+      Image,
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableCell,
+      TableHeader,
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      Highlight,
+    ],
+    content: content,
+    onUpdate: ({ editor }) => {
+      setContent(editor.getHTML());
+    },
+    editorProps: {
+      attributes: {
+        class: 'tiptap-editor',
+        style: 'min-height: 180px; font-family: monospace; font-size: 0.95rem;'
+      }
+    }
+  });
   const [active, setActive] = useState(prompt?.active ?? true);
   const [version, setVersion] = useState(prompt?.version || 1);
   const [variables, setVariables] = useState<PromptVariable[]>(prompt?.variables || []);
@@ -307,7 +342,7 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
                 <TextField
                   label="Prompt Name"
                   value={name}
-                  onChange={e => handleFieldChange('name', e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFieldChange('name', e.target.value)}
                   onBlur={() => handleBlur('name')}
                   fullWidth
                   required
@@ -321,7 +356,7 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
                 <TextField
                   label="Version"
                   value={version}
-                  onChange={e => handleFieldChange('version', e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFieldChange('version', e.target.value)}
                   fullWidth
                   disabled={!prompt}
                   helperText={prompt ? 'Version will be incremented' : 'Will be set to 1.0 for new prompts'}
@@ -329,30 +364,36 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
               </Grid>
 
               <Grid item xs={12}>
-                <TextField
-                  label="Prompt Content"
-                  value={content}
-                  onChange={e => handleFieldChange('content', e.target.value)}
-                  onBlur={() => handleBlur('content')}
-                  fullWidth
-                  required
-                  multiline
-                  minRows={6}
-                  maxRows={20}
-                  error={touched.content && !!errors.content}
-                  helperText={
-                    touched.content && errors.content
-                      ? errors.content
-                      : `${content.length} characters. Use {{variable_name}} for replaceable variables.`
-                  }
-                  placeholder="Enter your prompt content here. Use {{variable_name}} for variables that can be replaced."
-                  sx={{
-                    '& .MuiInputBase-root': {
-                      fontFamily: 'monospace',
-                      fontSize: '0.9rem',
-                    }
-                  }}
-                />
+                <Box mb={1}>
+                  <Typography variant="subtitle1" fontWeight="medium">
+                    Prompt Content
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Use <code>{'{{variable_name}}'}</code> for variables. Supports rich formatting, tables, images, code, etc.
+                  </Typography>
+                </Box>
+                {/* Tiptap Toolbar */}
+                {editor && (
+                  <Box mb={1} display="flex" flexWrap="wrap" gap={1}>
+                    <Button size="small" onClick={() => editor.chain().focus().toggleBold().run()} variant={editor.isActive('bold') ? 'contained' : 'outlined'}>Bold</Button>
+                    <Button size="small" onClick={() => editor.chain().focus().toggleItalic().run()} variant={editor.isActive('italic') ? 'contained' : 'outlined'}>Italic</Button>
+                    <Button size="small" onClick={() => editor.chain().focus().toggleUnderline().run()} variant={editor.isActive('underline') ? 'contained' : 'outlined'}>Underline</Button>
+                    <Button size="small" onClick={() => editor.chain().focus().toggleStrike().run()} variant={editor.isActive('strike') ? 'contained' : 'outlined'}>Strike</Button>
+                    <Button size="small" onClick={() => editor.chain().focus().toggleCode().run()} variant={editor.isActive('code') ? 'contained' : 'outlined'}>Code</Button>
+                    <Button size="small" onClick={() => editor.chain().focus().toggleBulletList().run()} variant={editor.isActive('bulletList') ? 'contained' : 'outlined'}>Bullet List</Button>
+                    <Button size="small" onClick={() => editor.chain().focus().toggleOrderedList().run()} variant={editor.isActive('orderedList') ? 'contained' : 'outlined'}>Numbered List</Button>
+                    <Button size="small" onClick={() => editor.chain().focus().toggleBlockquote().run()} variant={editor.isActive('blockquote') ? 'contained' : 'outlined'}>Blockquote</Button>
+                    <Button size="small" onClick={() => editor.chain().focus().setHorizontalRule().run()} variant="outlined">HR</Button>
+                    <Button size="small" onClick={() => editor.chain().focus().undo().run()} variant="outlined">Undo</Button>
+                    <Button size="small" onClick={() => editor.chain().focus().redo().run()} variant="outlined">Redo</Button>
+                  </Box>
+                )}
+                <Box border={1} borderColor={touched.content && errors.content ? 'error.main' : 'grey.300'} borderRadius={2} p={2} sx={{ minHeight: 180, background: '#fafbfc' }}>
+                  <EditorContent editor={editor} />
+                </Box>
+                {touched.content && errors.content && (
+                  <Typography color="error" variant="body2" mt={1}>{errors.content}</Typography>
+                )}
               </Grid>
             </Grid>
           </Box>
@@ -420,7 +461,7 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
                           <TextField
                             label="Variable Key"
                             value={variable.key}
-                            onChange={e => updateVariable(index, 'key', e.target.value)}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVariable(index, 'key', e.target.value)}
                             fullWidth
                             size="small"
                             error={!!errors.variables?.[variable.key]}
@@ -434,7 +475,7 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
                             <InputLabel>Type</InputLabel>
                             <Select
                               value={variable.type || 'string'}
-                              onChange={e => updateVariable(index, 'type', e.target.value)}
+                              onChange={(e: React.ChangeEvent<{ value: unknown }>) => updateVariable(index, 'type', e.target.value)}
                               label="Type"
                             >
                               <MenuItem value="string">String</MenuItem>
@@ -449,7 +490,7 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
                           <TextField
                             label="Default Value"
                             value={variable.defaultValue || ''}
-                            onChange={e => updateVariable(index, 'defaultValue', e.target.value)}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVariable(index, 'defaultValue', e.target.value)}
                             fullWidth
                             size="small"
                             placeholder="Optional default"
@@ -461,7 +502,7 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
                             control={
                               <Checkbox
                                 checked={variable.required ?? true}
-                                onChange={e => updateVariable(index, 'required', e.target.checked)}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVariable(index, 'required', e.target.checked)}
                                 size="small"
                               />
                             }
@@ -474,7 +515,7 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
                           <TextField
                             label="Description"
                             value={variable.description || ''}
-                            onChange={e => updateVariable(index, 'description', e.target.value)}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVariable(index, 'description', e.target.value)}
                             fullWidth
                             size="small"
                             placeholder="Describe what this variable represents"
@@ -486,9 +527,12 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
                             <TextField
                               label="Options (comma-separated)"
                               value={variable.options?.join(', ') || ''}
-                              onChange={e => updateVariableOptions(index,
-                                e.target.value.split(',').map(s => s.trim()).filter(s => s)
-                              )}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                updateVariableOptions(
+                                  index,
+                                  e.target.value.split(',').map((s: string) => s.trim()).filter((s: string) => s)
+                                )
+                              }
                               fullWidth
                               size="small"
                               placeholder="option1, option2, option3"
@@ -517,7 +561,7 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
                       <TextField
                         label={`Test value for ${variable.key}`}
                         value={previewValues[variable.key] || ''}
-                        onChange={e => setPreviewValues(prev => ({
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPreviewValues(prev => ({
                           ...prev,
                           [variable.key]: e.target.value
                         }))}
@@ -564,7 +608,7 @@ export default function PromptForm({prompt, onSave, onCancel}: Props) {
                   control={
                     <Checkbox
                       checked={active}
-                      onChange={e => setActive(e.target.checked)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setActive(e.target.checked)}
                       color="primary"
                     />
                   }
