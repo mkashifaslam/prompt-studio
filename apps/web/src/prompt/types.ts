@@ -4,7 +4,7 @@ export interface Prompt {
   content: string;
   variables: { key: string; description?: string; required?: boolean }[];
   metadata: Record<string, any>;
-  version: number;
+  version: string;
   active: boolean;
   createdAt: string;
   updatedAt: string;
