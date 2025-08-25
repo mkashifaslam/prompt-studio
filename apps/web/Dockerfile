@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:24-alpine
 
 WORKDIR /usr/src/app
 
@@ -6,7 +6,7 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci && npm cache clean --force
+RUN npm install && npm cache clean --force
 
 # Copy source code
 COPY . .
